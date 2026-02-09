@@ -43,6 +43,13 @@ export const create = async (data) => {
 export const update = async (id, data) => {
     return await prisma.movie.update({
         where: { id: parseInt(id) },
-        data,
+        data: {
+            ...(data.title && { title: data.title }),
+            ...(data.description && { description: data.description }),
+            ...(data.duration !== undefined && { duration: data.duration }),
+            ...(data.genre && { genre: data.genre }),
+            ...(data.rating !== undefined && { rating: data.rating }),
+            ...(data.available !== undefined && { available: data.available }),
+        },
     });
 };

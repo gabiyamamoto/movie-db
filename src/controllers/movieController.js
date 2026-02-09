@@ -164,6 +164,31 @@ export const update = async (req, res) => {
 
         if (!id || isNaN(id)) return res.status(400).json({ error: 'ID inválido.' });
 
+        if (!title || title.trim().length <= 3)
+            return res.status(400).json({
+                error: 'O título (title) é obrigatório e deve ter pelo menos 3 caracteres!',
+            });
+        if (!description || description.trim().length < 10)
+            return res.status(400).json({
+                error: 'A descrição (description) é obrigatória e deve ter pelo menos 10 caracteres!',
+            });
+
+        if (!duration)
+            return res.status(400).json({
+                error: 'A duração (duration) é obrigatória!',
+            });
+        if (!genre) return res.status(400).json({ error: 'O genêro (genre) é obrigatório!' });
+
+        if (isNaN(duration) || duration > 300)
+            return res.status(400).json({
+                error: 'A duração deve ser um número inteiro positivo e menor de 300 minutos',
+            });
+
+        if (rating < 0 || rating > 10)
+            return res.status(400).json({
+                error: 'A nota (rating) deve estar entre 0 e 10',
+            });
+
         if (!validGenres.includes(genre)) {
             return res.status(400).json({ error: 'Categoria inválida.' });
         }
