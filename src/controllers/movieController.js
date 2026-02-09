@@ -1,0 +1,189 @@
+import * as movieModel from '../models/movieModel.js';
+
+const validGenres = [
+    'Ação',
+    'Drama',
+    'Comédia',
+    'Terror',
+    'Romance',
+    'Animação',
+    'Ficção Científica',
+    'Suspense',
+];
+
+export const getAll = async (req, res) => {
+    try {
+        const filters = {};
+
+        if (req.query.title) filters.title = req.query.title;
+        if (req.query.genre) filters.genre = req.query.genre;
+        if (req.query.available !== undefined) filters.available = req.query.available === 'true';
+        if (req.query.minRating) filters.minRating = req.query.minRating;
+        if (req.query.maxDuration) filters.maxDuration = req.query.maxDuration;
+
+        const movies = await movieModel.findAll(filters);
+
+        if (!movies || movies.length === 0) {
+            return res.status(200).json({
+                message: 'Nenhum registro encontrado.',
+            });
+        }
+        res.status(200).json({
+            total: movies.length,
+            message: 'Lista de filmes disponíveis',
+            filters,
+            movies,
+        });
+    } catch (error) {
+        console.error('Erro ao buscar:', error);
+        res.status(500).json({ error: 'Erro ao buscar registros' });
+    }
+};
+
+export const getById = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        if (isNaN(id)) {
+            return res.status(400).json({ error: 'O ID enviado não é um número válido.' });
+        }
+
+        const data = await movieModel.findById(id);
+        if (!data) {
+            return res.status(404).json({ error: 'Registro não encontrado.' });
+        }
+
+        res.status(200).json({
+            message: 'Lista de filmes disponíveis',
+            data,
+        });
+    } catch (error) {
+        console.error('Erro ao buscar:', error);
+        res.status(500).json({ error: 'Erro ao buscar registro' });
+    }
+};
+
+export const remove = async (req, res) => {
+    try {
+        const { id, rating } = req.params;
+
+        if (isNaN(id)) return res.status(400).json({ error: 'ID inválido.' });
+
+        if (rating >= 9)
+            return res.status(403).json({
+                error: 'Não é possível apagar registros com rating maior ou igual a 9',
+            });
+
+        const exists = await movieModel.findById(id);
+        if (!exists) {
+            return res.status(404).json({ error: 'Registro não encontrado para deletar.' });
+        }
+
+        await movieModel.remove(id);
+        res.json({
+            message: `O registro "${exists.title}" foi deletado com sucesso!`,
+            deletado: exists,
+        });
+    } catch (error) {
+        console.error('Erro ao deletar:', error);
+        res.status(500).json({ error: 'Erro ao deletar registro' });
+    }
+};
+
+export const create = async (req, res) => {
+    try {
+        if (!req.body || Object.keys(req.body).length === 0) {
+            return res.status(400).json({
+                error: 'Corpo da requisição vazio. Envie os dados do movie!',
+            });
+        }
+
+        const { title, description, duration, genre, rating, available } = req.body;
+
+        if (!title || title.trim().length <= 3)
+            return res.status(400).json({
+                error: 'O título (title) é obrigatório e deve ter pelo menos 3 caracteres!',
+            });
+        if (!description || description.trim().length < 10)
+            return res.status(400).json({
+                error: 'A descrição (description) é obrigatória e deve ter pelo menos 10 caracteres!',
+            });
+        if (!duration)
+            return res.status(400).json({
+                error: 'A duração (duration) é obrigatória!',
+            });
+        if (!genre) return res.status(400).json({ error: 'O genêro (genre) é obrigatório!' });
+
+        if (isNaN(duration) || duration > 300)
+            return res.status(400).json({
+                error: 'A duração deve ser um número inteiro positivo e menor de 300 minutos',
+            });
+        if (rating < 0 || rating > 10)
+            return res.status(400).json({
+                error: 'A nota (rating) deve estar entre 0 e 10',
+            });
+
+        if (!validGenres.includes(genre)) {
+            return res.status(400).json({ error: 'Categoria inválida.' });
+        }
+
+        const data = await movieModel.create({
+            title,
+            description,
+            duration,
+            genre,
+            rating,
+            available,
+        });
+
+        if (!data)
+            return res.status(400).json({
+                error: 'Já existe um filme com esse título!',
+            });
+
+        res.status(201).json({
+            message: 'Registro cadastrado com sucesso!',
+            data,
+        });
+    } catch (error) {
+        console.error('Erro ao criar:', error);
+        res.status(500).json({ error: 'Erro interno no servidor ao salvar o registro.' });
+    }
+};
+
+export const update = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { title, description, duration, genre, rating, available } = req.body;
+
+        if (!req.body || Object.keys(req.body).length === 0) {
+            return res.status(400).json({
+                error: 'Corpo da requisição vazio. Envie os dados do filme!',
+            });
+        }
+
+        if (!id || isNaN(id)) return res.status(400).json({ error: 'ID inválido.' });
+
+        if (!validGenres.includes(genre)) {
+            return res.status(400).json({ error: 'Categoria inválida.' });
+        }
+
+        if (available === false)
+            return res
+                .status(400).json({ error: 'Filmes com available = false não podem ser atualizados' });
+
+        const exists = await movieModel.findById(id);
+        if (!exists) {
+            return res.status(404).json({ error: 'Registro não encontrado para atualizar.' });
+        }
+
+        const data = await movieModel.update(id, req.body);
+        res.json({
+            message: `O registro "${data.title}" foi atualizado com sucesso!`,
+            data,
+        });
+    } catch (error) {
+        console.error('Erro ao atualizar:', error);
+        res.status(500).json({ error: 'Erro ao atualizar registro' });
+    }
+};
