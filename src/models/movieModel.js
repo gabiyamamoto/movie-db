@@ -29,14 +29,6 @@ export const remove = async (id) => {
 };
 
 export const create = async (data) => {
-    const movieExistente = await prisma.movie.findFirst({
-        where: {
-            title: { equals: data.title, mode: 'insensitive' },
-        },
-    });
-
-    if (movieExistente) return null;
-
     return await prisma.movie.create({ data });
 };
 
