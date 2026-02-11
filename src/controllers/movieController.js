@@ -126,7 +126,7 @@ export const create = async (req, res) => {
         //R4
         if (duration > 300)
             return res.status(400).json({
-                error: 'A duração deve ser um número inteiro positivo.',
+                error: 'A duração deve ser menor que 300 minutos.',
             });
         //R6
         if (isNaN(rating) || rating < 0 || rating > 10)
@@ -134,15 +134,18 @@ export const create = async (req, res) => {
                 error: 'A nota (rating) deve estar entre 0 e 10',
             });
         //R5
-        if (!validGenres.includes(genre)) {
-            return res.status(400).json({ error: 'Gênero inválido. Valores permitidos' + validGenres.join(', ') });
+        const formattedGenre =
+            validGenres.find(g => g.toLowerCase() === genre.toLowerCase());
+
+        if (!formattedGenre) {
+            return res.status(400).json({ error: 'Gênero inválido. Valores permitidos: ' + validGenres.join(', ') });
         }
 
         const data = await movieModel.create({
             title,
             description,
             duration,
-            genre,
+            genre: formattedGenre,
             rating,
             available: true
         });
@@ -217,9 +220,16 @@ export const update = async (req, res) => {
                 });
         };
 
+        let formattedGenre;
+
         if (genre !== undefined) {
-            if (!validGenres.includes(genre))
-                return res.status(400).json({ error: 'Gênero inválido. Valores permitidos' + validGenres.join(', ') });
+
+            formattedGenre =
+                validGenres.find(g => g.toLowerCase() === genre.toLowerCase());
+
+            if (!formattedGenre) {
+                return res.status(400).json({ error: 'Gênero inválido. Valores permitidos: ' + validGenres.join(', ') });
+            }
         };
 
         if (available !== undefined) {
@@ -233,7 +243,7 @@ export const update = async (req, res) => {
             title: title ?? exists.title,
             description: description ?? exists.description,
             duration: duration ?? exists.duration,
-            genre: genre ?? exists.genre,
+            genre: formattedGenre ?? exists.genre,
             rating: rating ?? exists.rating,
             available: available ?? exists.available,
         };
@@ -246,12 +256,12 @@ export const update = async (req, res) => {
 
     } catch (error) {
 
-                if (error.code === 'P2002') {
+        if (error.code === 'P2002') {
             return res.status(409).json({
                 error: 'Já existe um filme com esse título!',
             });
         };
-        
+
         console.error('Erro ao atualizar:', error);
         res.status(500).json({ error: 'Erro ao atualizar registro' });
     }
